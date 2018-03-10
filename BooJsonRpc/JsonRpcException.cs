@@ -8,22 +8,16 @@ namespace BooJsonRpc
 {
     public class JsonRpcException : Exception
     {
-        public JsonRpcException(JsonRpcError error)
-            : base(error.Message)
+        public JsonRpcException(JsonRpcErrorCode errorCode)
+            : base(errorCode.Message)
         {
-            if (error == null)
-                throw new ArgumentNullException(nameof(error));
-
-            Error = error;
+            Error = new JsonRpcError(errorCode);
         }
 
-        public JsonRpcException(JsonRpcError error, Exception innerException)
-            : base(error.Message, innerException)
+        public JsonRpcException(JsonRpcErrorCode errorCode, Exception innerException)
+            : base(errorCode.Message, innerException)
         {
-            if (error == null)
-                throw new ArgumentNullException(nameof(error));
-
-            Error = error;
+            Error = new JsonRpcError(errorCode, innerException);
         }
 
         public JsonRpcError Error { get; private set; }

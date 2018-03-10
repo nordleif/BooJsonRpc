@@ -9,17 +9,12 @@ namespace BooJsonRpc
     /// <summary>
     /// When a rpc call is made, the Server MUST reply with a Response, except for in the case of Notifications.
     /// </summary>
-    public class JsonRpcResponse
+    public class JsonRpcResponse : JsonRpcObject
     {
         public JsonRpcResponse()
         {
 
         }
-
-        /// <summary>
-        /// A String specifying the version of the JSON-RPC protocol. MUST be exactly "2.0".
-        /// </summary>
-        public string JsonRpc { get; set; }
 
         /// <summary>
         /// This member is REQUIRED on success.
@@ -33,12 +28,5 @@ namespace BooJsonRpc
         /// This member MUST NOT exist if there was no error triggered during invocation.
         /// </summary>
         public JsonRpcError Error { get; set; }
-
-        /// <summary>
-        /// This member is REQUIRED.
-        /// It MUST be the same as the value of the id member in the Request Object.
-        /// If there was an error in detecting the id in the Request object (e.g.Parse error/Invalid Request), it MUST be Null.
-        /// </summary>
-        public string Id { get; set; }
     }
 }
