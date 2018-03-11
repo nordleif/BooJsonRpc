@@ -20,32 +20,36 @@ namespace BooJsonRpc
                 throw new ArgumentNullException(nameof(items));
 
             var result = new List<JsonRpcObject>();
-            foreach(var item in items)
+            foreach (var item in items)
             {
                 if (item is JsonRpcRequest request)
                 {
-                    var response = new JsonRpcResponse { JsonRpc = request.JsonRpc, Id = request.Id };
+                    var response = new JsonRpcResponse { JsonRpc = "2.0", Id = request.Id };
                     try
                     {
                         response.Result = func?.Invoke(request);
                     }
-                    catch(JsonRpcException ex)
+                    catch (JsonRpcException ex)
                     {
                         response.Error = ex.Error;
                     }
-                    catch(Exception ex)
+                    catch (Exception ex)
                     {
                         response.Error = new JsonRpcError(JsonRpcErrorCode.InternalError, ex);
                     }
 
+                    // A Notification is a Request object without an "id" member. 
+                    // The Server MUST NOT reply to a Notification, including those that are within a batch request.
                     if (!string.IsNullOrWhiteSpace(response.Id))
-                        result.Add(response);
+                        result.Add(response);       
+                }
+                else if (item is JsonRpcError error)
+                {
+                    result.Add(new JsonRpcResponse { JsonRpc = "2.0", Error = error });
                 }
                 else
                 {
-                    var response = item.Clone();
-                    if (!string.IsNullOrWhiteSpace(response.Id))
-                        result.Add(response);
+                    result.Add(new JsonRpcResponse { JsonRpc = "2.0", Error = new JsonRpcError(JsonRpcErrorCode.InternalError) });
                 }
             }
             return result;
@@ -59,6 +63,12 @@ namespace BooJsonRpc
         }
 
         /// <summary>
+        /// A String specifying the version of the JSON-RPC protocol. MUST be exactly "2.0".
+        /// </summary>
+        public string JsonRpc { get; set; }
+
+
+        /// <summary>
         /// A String containing the name of the method to be invoked. 
         /// Method names that begin with the word rpc followed by a period character (U+002E or ASCII 46) 
         /// are reserved for rpc-internal methods and extensions and MUST NOT be used for anything else.
@@ -69,7 +79,14 @@ namespace BooJsonRpc
         /// A Structured value that holds the parameter values to be used during the invocation of the method. 
         /// This member MAY be omitted.
         /// </summary>
-        public JsonRpcParams Params { get; set; }
+        public dynamic Params { get; set; }
+
+        /// <summary>
+        /// An identifier established by the Client that MUST contain a String, Number, or NULL value if included. 
+        /// If it is not included it is assumed to be a notification. 
+        /// The value SHOULD normally not be Null [1] and Numbers SHOULD NOT contain fractional parts
+        /// </summary>
+        public string Id { get; set; }
 
         /// <summary>
         /// Invokes the method or constructor represented by the current instance, using the specified parameters.

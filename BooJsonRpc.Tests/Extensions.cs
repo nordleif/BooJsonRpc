@@ -4,13 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BooJsonRpc
+namespace BooJsonRpc.Tests
 {
-    public class JsonRpcParams
+    class Extensions
     {
-        public JsonRpcParams()
-        {
-
-        }
     }
 }

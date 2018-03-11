@@ -10,57 +10,57 @@ namespace BooJsonRpc
 {
     public static class JsonRpcConvert
     {
-        public static IEnumerable<JsonRpcObject> Deserialize(string json, JsonRpcSerializerSettings settings = null)
+        public static IEnumerable<JsonRpcObject> Deserialize(string json)
         {
             if (string.IsNullOrWhiteSpace(json))
                 throw new ArgumentNullException(nameof(json));
 
-            if (settings == null)
-                settings = JsonRpcSerializerSettings.Default;
-
             try
             {
-                var items = new List<JsonRpcObject>();
-                var obj = ParseJson(json);
-                if (obj is JArray array)
+                var obj = ReadJson(json);
+                if (obj is JsonRpcError error)
+                    return new[] { error };
+
+                if (obj is JArray jArray)
                 {
-                    foreach (var item in array)
-                        items.Add(ParseObject(item));
+                    var items = new List<JsonRpcObject>();
+                    foreach (var item in jArray)
+                        items.Add(ReadObject(item));
+                    return items;
                 }
                 else
                 {
-                    items.Add(ParseObject((JToken)obj));
+                    return new[] { ReadObject((JToken)obj) };
                 }
-                return items;
-            }
-            catch(JsonRpcException ex)
-            {
-                return new[] { new JsonRpcResponse { JsonRpc = "2.0", Error = ex.Error } };
             }
             catch(Exception ex)
             {
-                return new[] { new JsonRpcResponse { JsonRpc = "2.0", Error = new JsonRpcError(JsonRpcErrorCode.InternalError, ex) } };
+                return new[] { new JsonRpcError(JsonRpcErrorCode.InternalError, ex) };
             }
         }
 
-        public static string Serialize(IEnumerable<JsonRpcObject> items, JsonRpcSerializerSettings settings = null)
+        public static string Serialize(IEnumerable<JsonRpcObject> items)
         {
             if (items == null)
                 throw new ArgumentNullException(nameof(items));
 
-            if (settings == null)
-                settings = JsonRpcSerializerSettings.Default;
-
+            var json = string.Empty;
             var length = items.Count();
             if (length == 0)
-                return JsonConvert.SerializeObject(new object(), settings.JsonSerializerSettings);
+                json = JsonConvert.SerializeObject(new object());
             else if (length == 1)
-                return JsonConvert.SerializeObject(items.First(), settings.JsonSerializerSettings);
+                json = JsonConvert.SerializeObject(Write(items.First()));
             else
-                return JsonConvert.SerializeObject(items, settings.JsonSerializerSettings);
+            {
+                var jArray = new JArray();
+                foreach (var item in items)
+                    jArray.Add(Write(item));
+                json = JsonConvert.SerializeObject(jArray); 
+            }
+            return json;
         }
 
-        private static object ParseJson(string json)
+        private static object ReadJson(string json)
         {
             if (string.IsNullOrWhiteSpace(json))
                 throw new ArgumentNullException(nameof(json));
@@ -71,11 +71,11 @@ namespace BooJsonRpc
             }
             catch (Exception ex)
             {
-                throw new JsonRpcException(JsonRpcErrorCode.ParseError, ex);
+                return new JsonRpcError(JsonRpcErrorCode.ParseError, ex);
             }
         }
 
-        private static JsonRpcObject ParseObject(JToken token)
+        private static JsonRpcObject ReadObject(JToken token)
         {
             try
             {
@@ -83,69 +83,98 @@ namespace BooJsonRpc
                     throw new ArgumentNullException(nameof(token));
 
                 JsonRpcObject obj = null;
-                if (token.Contains("method"))
+                if (token["method"] != null)
                 {
                     obj = new JsonRpcRequest
                     {
                         JsonRpc = (string)token["jsonrpc"],
                         Method = (string)token["method"],
-                        Params = ParseParams(token["params"]),
+                        Params = token["params"],
                         Id = (string)token["id"],
                     };
                 }
-                else if (token.Contains("result") || token.Contains("error"))
+                else if (token["result"] != null || token["error"] != null)
                 {
                     obj = new JsonRpcResponse
                     {
                         JsonRpc = (string)token["jsonrpc"],
-                        Result = ParseError(token["result"]),
-                        Error = ParseError(token["error"]),
+                        Result = token["result"],
+                        Error = ReadError(token["error"]),
                         Id = (string)token["id"],
                     };
                 }
                 else
                 {
-                    obj = new JsonRpcResponse { JsonRpc = "2.0", Error = new JsonRpcError(JsonRpcErrorCode.InvalidRequest) };
+                    obj = new JsonRpcError(JsonRpcErrorCode.InvalidRequest);
                 }
 
-                if (obj.JsonRpc != "2.0")
-                    throw new JsonRpcException(JsonRpcErrorCode.InvalidRequest, new Exception("The jsonrpc member MUST be exactly 2.0."));
+                //if (obj.JsonRpc != "2.0")
+                //    throw new JsonRpcException(JsonRpcErrorCode.InvalidRequest, new Exception("The jsonrpc member MUST be exactly 2.0."));
 
-                if (obj is JsonRpcResponse response)
-                {
-                    if (response.Result != null && response.Error != null)
-                        throw new JsonRpcException(JsonRpcErrorCode.InvalidRequest, new Exception("Either the result member or error member MUST be included, but both members MUST NOT be included."));
-                }
+                //if (obj is JsonRpcResponse response)
+                //{
+                //    if (response.Result != null && response.Error != null)
+                //        throw new JsonRpcException(JsonRpcErrorCode.InvalidRequest, new Exception("Either the result member or error member MUST be included, but both members MUST NOT be included."));
+                //}
 
                 return obj;
             }
-            catch (JsonRpcException ex)
-            {
-                return new JsonRpcResponse { JsonRpc = "2.0", Error = ex.Error };
-            }
             catch (Exception ex)
             {
-                return new JsonRpcResponse { JsonRpc = "2.0", Error = new JsonRpcError(JsonRpcErrorCode.InternalError, ex) };
+                return new JsonRpcError(JsonRpcErrorCode.InternalError, ex);
             }
         }
 
-        public static JsonRpcParams ParseParams(JToken token)
+        private static JsonRpcError ReadError(JToken token)
         {
-            // This member MAY be omitted.
-            if (token == null)
-                return null;
-
-            return new JsonRpcParams();
+            var errorCode = new JsonRpcErrorCode {
+                Number = (int)token["number"],
+                Message = (string)token["message"],
+            };
+            var data = (string)token["data"];
+            return new JsonRpcError(errorCode, data);
         }
 
-        public static object ParseResult(JToken token)
+        private static JToken Write(JsonRpcObject obj)
         {
-            return null;
-        }
-
-        public static JsonRpcError ParseError(JToken token)
-        {
-            return null;
+            if (obj == null)
+                throw new ArgumentNullException(nameof(obj));
+            
+            var jObject = new JObject();
+            if (obj is JsonRpcRequest request)
+            {
+                if (!string.IsNullOrWhiteSpace(request.JsonRpc))
+                    jObject["jsonrpc"] = request.JsonRpc;
+                if (!string.IsNullOrWhiteSpace(request.Method))
+                    jObject["method"] = request.Method;
+                if (request.Params != null)
+                    jObject["params"] = request.Params;
+                if (!string.IsNullOrWhiteSpace(request.Id))
+                    jObject["id"] = request.Id;
+            }
+            else if (obj is JsonRpcResponse response)
+            {
+                if (!string.IsNullOrWhiteSpace(response.JsonRpc))
+                    jObject["jsonrpc"] = response.JsonRpc;
+                if (response.Result != null || (response.Result == null && response.Error == null))
+                    jObject["result"] = response.Result;
+                if (response.Error != null)
+                    jObject["error"] = Write(response.Error);
+                if (!string.IsNullOrWhiteSpace(response.Id))
+                    jObject["id"] = response.Id;
+            }
+            else if (obj is JsonRpcError error)
+            {
+                jObject["number"] = error.Number;
+                jObject["message"] = error.Message;
+                if (!string.IsNullOrWhiteSpace(error.Data))
+                    jObject["data"] = error.Data;
+            }
+            else
+            {
+                throw new NotSupportedException();
+            }
+            return jObject;
         }
     }
 }

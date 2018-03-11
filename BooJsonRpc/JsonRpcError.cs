@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace BooJsonRpc
 {
-    public class JsonRpcError
+    public class JsonRpcError : JsonRpcObject
     {
         /// <summary>
         /// The error codes from and including -32768 to -32000 are reserved for pre-defined errors. 
@@ -17,7 +17,7 @@ namespace BooJsonRpc
         {
             Number = errorCode.Number;
             Message = errorCode.Message;
-            Data = data;
+            Data = data?.ToString();
         }
 
         /// <summary>
@@ -37,6 +37,6 @@ namespace BooJsonRpc
         /// This may be omitted.
         /// The value of this member is defined by the Server (e.g. detailed error information, nested errors etc.).
         /// </summary>
-        public object Data { get; set; }
+        public string Data { get; set; }
     }
 }

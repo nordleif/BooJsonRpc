@@ -48,10 +48,8 @@
     <Compile Include="JsonRpcErrorCode.cs" />
     <Compile Include="JsonRpcException.cs" />
     <Compile Include="JsonRpcObject.cs" />
-    <Compile Include="JsonRpcParams.cs" />
     <Compile Include="JsonRpcRequest.cs" />
     <Compile Include="JsonRpcResponse.cs" />
-    <Compile Include="JsonRpcSerializerSettings.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
