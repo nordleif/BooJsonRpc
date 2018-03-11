@@ -23,6 +23,9 @@ namespace BooJsonRpc
 
                 if (obj is JArray jArray)
                 {
+                    if (!jArray.Any())
+                        return new[] { new JsonRpcError(JsonRpcErrorCode.InvalidRequest) };
+
                     var items = new List<JsonRpcObject>();
                     foreach (var item in jArray)
                         items.Add(ReadObject(item));
@@ -82,6 +85,9 @@ namespace BooJsonRpc
                 if (token == null)
                     throw new ArgumentNullException(nameof(token));
 
+                if (!token.Any())
+                    return new JsonRpcError(JsonRpcErrorCode.InvalidRequest);
+
                 JsonRpcObject obj = null;
                 if (token["method"] != null)
                 {
@@ -99,7 +105,7 @@ namespace BooJsonRpc
                     {
                         JsonRpc = (string)token["jsonrpc"],
                         Result = token["result"],
-                        Error = ReadError(token["error"]),
+                        Error = token["error"] != null ? ReadError(token["error"]) : null,
                         Id = (string)token["id"],
                     };
                 }
@@ -127,8 +133,11 @@ namespace BooJsonRpc
 
         private static JsonRpcError ReadError(JToken token)
         {
+            if (token == null)
+                throw new ArgumentNullException(nameof(token));
+
             var errorCode = new JsonRpcErrorCode {
-                Number = (int)token["number"],
+                Code = (int)token["code"],
                 Message = (string)token["message"],
             };
             var data = (string)token["data"];
@@ -165,7 +174,7 @@ namespace BooJsonRpc
             }
             else if (obj is JsonRpcError error)
             {
-                jObject["number"] = error.Number;
+                jObject["code"] = error.Code;
                 jObject["message"] = error.Message;
                 if (!string.IsNullOrWhiteSpace(error.Data))
                     jObject["data"] = error.Data;

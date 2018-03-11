@@ -13,9 +13,9 @@ namespace BooJsonRpc.Tests
 
         }
 
-        public int subtract(int subtrahend, int minuend)
+        public int subtract(int minuend, int subtrahend)
         {
-            return subtrahend - minuend;
+            return minuend - subtrahend;
         }
     }
 }

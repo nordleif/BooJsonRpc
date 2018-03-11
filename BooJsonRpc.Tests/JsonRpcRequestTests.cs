@@ -10,22 +10,24 @@ namespace BooJsonRpc.Tests
     [TestFixture]
     public class JsonRpcRequestTests
     {
-        [TestCase("{'jsonrpc': '2.0', 'method': 'subtract', 'params': [42, 23], 'id': 1}", "{'jsonrpc': '2.0', 'result': 19, 'id': 1}")]
-        [TestCase("{'jsonrpc': '2.0', 'method': 'subtract', 'params': [23, 42], 'id': 2}", "{'jsonrpc': '2.0', 'result': -19, 'id': 2}")]
         [Test]
-        public void JsonRpcRequest_ProcessRpcCallWithPositionalParameters(string request, string expectedResponse)
+        public void JsonRpcRequest_Invoke_PositionalParameters()
         {
-            //var obj = new MockObject();
-            //var actualResponse = JsonRpcRequest.Process(request, r => r.Invoke(obj));
-            //Assert.AreEqual(actualResponse, expectedResponse);
+            var obj = new MockObject();
+            var json = "{'jsonrpc': '2.0', 'method': 'subtract', 'params': [42, 23], 'id': 1}";
+            var request = (JsonRpcRequest)JsonRpcConvert.Deserialize(json).First();
+            var result = request.Invoke(obj);
+            Assert.AreEqual(19, result);
         }
 
-        [TestCase("{'jsonrpc': '2.0', 'method': 'sum', 'params': [1,2,4], 'id': '1'}, {'jsonrpc': '2.0', 'method': 'notify_hello', 'params': [7] }, {'jsonrpc': '2.0', 'method': 'subtract', 'params': [42,23], 'id': '2'}, {'foo': 'boo'}, {'jsonrpc': '2.0', 'method': 'foo.get', 'params': {'name': 'myself'}, 'id': '5'}, {'jsonrpc': '2.0', 'method': 'get_data', 'id': '9'}")]
         [Test]
-        public void JsonRpcRequest_ProcessRpcCallBatch(string json)
+        public void JsonRpcRequest_Invoke_NamedParameters()
         {
-            //var responses = JsonRpcRequest.Process(json);
-            //Assert.AreEqual(responses.Count(), 5);
+            var obj = new MockObject();
+            var json = "{'jsonrpc': '2.0', 'method': 'subtract', 'params': {'subtrahend': 23, 'minuend': 42}, 'id': 3}";
+            var request = (JsonRpcRequest)JsonRpcConvert.Deserialize(json).First();
+            var result = request.Invoke(obj);
+            Assert.AreEqual(19, result);
         }
     }
 }

@@ -15,7 +15,7 @@ namespace BooJsonRpc
         /// </summary>
         public JsonRpcError(JsonRpcErrorCode errorCode, object data = null)
         {
-            Number = errorCode.Number;
+            Code = errorCode.Code;
             Message = errorCode.Message;
             Data = data?.ToString();
         }
@@ -24,7 +24,7 @@ namespace BooJsonRpc
         /// A Number that indicates the error type that occurred.
         /// This MUST be an integer.
         /// </summary>
-        public int Number { get; set; }
+        public int Code { get; set; }
 
         /// <summary>
         /// A String providing a short description of the error.

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 
 namespace BooJsonRpc
 {
@@ -101,11 +102,54 @@ namespace BooJsonRpc
             if (method == null)
                 throw new JsonRpcException(JsonRpcErrorCode.MethodNotFound);
 
-            var parameters = method.GetParameters();
-            if (!parameters.Any() && Params != null)
-                throw new JsonRpcException(JsonRpcErrorCode.InvalidParams);
+            object result = null;
+            var methodParameters = method.GetParameters();
+            if (Params is JArray jArray)
+            {
+                var requestParameters = jArray.ToArray();
+                if (methodParameters.Length != requestParameters.Length)
+                    throw new JsonRpcException(JsonRpcErrorCode.InvalidParams);
 
-            return null;
+                var invokeParameters = new object[methodParameters.Length];
+                for(var i = 0; i < methodParameters.Length; i++)
+                {
+                    var methodParameter = methodParameters[i];
+                    var requestParameter = requestParameters[i];
+                    try
+                    {
+                        invokeParameters[i] = Convert.ChangeType(requestParameter, methodParameter.ParameterType);
+                    }
+                    catch(Exception ex)
+                    {
+                        throw new JsonRpcException(JsonRpcErrorCode.InvalidParams, ex);
+                    }
+                }
+
+                result = method.Invoke(obj, invokeParameters);
+            }
+            else if (Params is JToken token)
+            {
+                var invokeParameters = new object[methodParameters.Length];
+                for (var i = 0; i < methodParameters.Length; i++)
+                {
+                    var methodParameter = methodParameters[i];
+                    var requestParameter = token[methodParameter.Name];
+                    if (requestParameter == null)
+                        continue;
+                    try
+                    {
+                        invokeParameters[i] = Convert.ChangeType(requestParameter, methodParameter.ParameterType);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new JsonRpcException(JsonRpcErrorCode.InvalidParams, ex);
+                    }
+                }
+
+                result = method.Invoke(obj, invokeParameters);
+            }
+            
+            return result;
         }
     }
 }

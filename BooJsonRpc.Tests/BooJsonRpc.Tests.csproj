@@ -46,7 +46,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Extensions.cs" />
     <Compile Include="JsonRpcConvertTests.cs" />
     <Compile Include="JsonRpcRequestTests.cs" />
     <Compile Include="MockObject.cs" />
